@@ -65,6 +65,18 @@ const state = {
 // Caché de imágenes cargadas
 const imageCache = new Map();
 
+const STORAGE_KEY = 'geodesafios_personal_defaults';
+
+const FACTORY_DEFAULTS = {
+  fontSizePt: 65,
+  strokeWidthPt: 2,
+  bgYPercent: 50,
+  shadowIntensity: 1.2,
+  canvasWidth: 800,
+  canvasHeight: 400,
+  mode: 'full'
+};
+
 // Referencias del DOM
 const elements = {
   canvas: document.getElementById('previewCanvas'),
@@ -103,6 +115,11 @@ const elements = {
   shadowVal: document.getElementById('shadowVal'),
   btnResetSettings: document.getElementById('btnResetSettings'),
   
+  // Configuración Personal (LocalStorage)
+  btnSavePersonalDefaults: document.getElementById('btnSavePersonalDefaults'),
+  btnLoadPersonalDefaults: document.getElementById('btnLoadPersonalDefaults'),
+  savedBadge: document.getElementById('savedBadge'),
+  
   // Ficha técnica
   specDim: document.getElementById('specDim'),
   specMode: document.getElementById('specMode'),
@@ -111,7 +128,6 @@ const elements = {
   previewFilename: document.getElementById('previewFilename'),
   btnDownload: document.getElementById('btnDownload'),
   btnCopyClipboard: document.getElementById('btnCopyClipboard'),
-  loadingOverlay: document.getElementById('loadingOverlay'),
   statusToast: document.getElementById('statusToast'),
   
   // Modal Lightbox
@@ -673,6 +689,111 @@ function updateModeUI() {
 }
 
 /**
+ * Lee la configuración personal guardada en localStorage
+ */
+function getPersonalDefaults() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) return JSON.parse(saved);
+  } catch (e) {
+    console.warn('Error al leer de localStorage:', e);
+  }
+  return null;
+}
+
+/**
+ * Guarda los valores actuales como predeterminados personales del usuario
+ */
+function savePersonalDefaults() {
+  const custom = {
+    fontSizePt: state.fontSizePt,
+    strokeWidthPt: state.strokeWidthPt,
+    bgYPercent: state.bgYPercent,
+    shadowIntensity: state.shadowIntensity,
+    canvasWidth: state.canvasWidth,
+    canvasHeight: state.canvasHeight,
+    mode: state.mode
+  };
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(custom));
+    updatePersonalDefaultsUIState();
+    showToast('💾 ¡Ajustes guardados como tus predeterminados!', 'success');
+  } catch (e) {
+    console.error('Error al guardar en localStorage:', e);
+    showToast('No se pudo guardar la configuración en este navegador', 'error');
+  }
+}
+
+/**
+ * Aplica un conjunto de configuración (personal o de fábrica) a la app
+ */
+function applySettings(config, toastMsg = null) {
+  state.fontSizePt = config.fontSizePt !== undefined ? config.fontSizePt : 65;
+  state.strokeWidthPt = config.strokeWidthPt !== undefined ? config.strokeWidthPt : 2;
+  state.bgYPercent = config.bgYPercent !== undefined ? config.bgYPercent : 50;
+  state.shadowIntensity = config.shadowIntensity !== undefined ? config.shadowIntensity : 1.2;
+  state.canvasWidth = config.canvasWidth !== undefined ? config.canvasWidth : 800;
+  state.canvasHeight = config.canvasHeight !== undefined ? config.canvasHeight : 400;
+  state.mode = config.mode || 'full';
+
+  // Sincronizar sliders y controles
+  if (elements.fontSizeRange) {
+    elements.fontSizeRange.value = state.fontSizePt;
+    elements.fontSizeVal.textContent = `${state.fontSizePt} pt`;
+  }
+  if (elements.strokeWidthRange) {
+    elements.strokeWidthRange.value = state.strokeWidthPt;
+    elements.strokeWidthVal.textContent = `${state.strokeWidthPt} pt`;
+  }
+  if (elements.bgYRange) {
+    elements.bgYRange.value = state.bgYPercent;
+    elements.bgYVal.textContent = state.bgYPercent === 50 ? 'Centro (50%)' : `${state.bgYPercent}%`;
+  }
+  if (elements.shadowRange) {
+    const shadowPercent = Math.round(state.shadowIntensity * 100);
+    elements.shadowRange.value = shadowPercent;
+    elements.shadowVal.textContent = `${shadowPercent}%`;
+  }
+  if (elements.customWidth) {
+    elements.customWidth.value = state.canvasWidth;
+  }
+  if (elements.customHeight) {
+    elements.customHeight.value = state.canvasHeight;
+  }
+  if (elements.dimChips) {
+    elements.dimChips.forEach(chip => {
+      const cw = parseInt(chip.dataset.w, 10);
+      const ch = parseInt(chip.dataset.h, 10);
+      chip.classList.toggle('active', cw === state.canvasWidth && ch === state.canvasHeight);
+    });
+  }
+
+  updateModeUI();
+  triggerRender();
+  if (toastMsg) {
+    showToast(toastMsg, 'success');
+  }
+}
+
+/**
+ * Actualiza el estado visual de los botones de predeterminados personales
+ */
+function updatePersonalDefaultsUIState() {
+  const saved = getPersonalDefaults();
+  if (elements.savedBadge) {
+    elements.savedBadge.style.display = saved ? 'inline-block' : 'none';
+  }
+  if (elements.btnLoadPersonalDefaults) {
+    elements.btnLoadPersonalDefaults.disabled = !saved;
+    if (saved) {
+      elements.btnLoadPersonalDefaults.title = `Cargar ajustes guardados (${saved.canvasWidth}x${saved.canvasHeight}, ${saved.fontSizePt}pt, ${Math.round(saved.shadowIntensity*100)}% sombra)`;
+    } else {
+      elements.btnLoadPersonalDefaults.title = 'Aún no has guardado ninguna configuración personal';
+    }
+  }
+}
+
+/**
  * Vinculación de eventos de la interfaz
  */
 function attachEventListeners() {
@@ -824,38 +945,29 @@ function attachEventListeners() {
     triggerRender();
   });
 
-  // Restablecer valores por defecto
-  elements.btnResetSettings.addEventListener('click', () => {
-    state.fontSizePt = 65;
-    state.strokeWidthPt = 2;
-    state.bgYPercent = 50;
-    state.shadowIntensity = 1.2;
-    state.canvasWidth = 800;
-    state.canvasHeight = 400;
-    state.mode = 'full';
-
-    elements.fontSizeRange.value = 65;
-    elements.fontSizeVal.textContent = '65 pt';
-
-    elements.strokeWidthRange.value = 2;
-    elements.strokeWidthVal.textContent = '2 pt';
-
-    elements.bgYRange.value = 50;
-    elements.bgYVal.textContent = 'Centro (50%)';
-
-    elements.shadowRange.value = 120;
-    elements.shadowVal.textContent = '120%';
-
-    elements.customWidth.value = 800;
-    elements.customHeight.value = 400;
-    elements.dimChips.forEach(chip => {
-      chip.classList.toggle('active', chip.dataset.w === '800' && chip.dataset.h === '400');
+  // Restablecer a valores de fábrica
+  if (elements.btnResetSettings) {
+    elements.btnResetSettings.addEventListener('click', () => {
+      applySettings(FACTORY_DEFAULTS, '🔄 Valores de fábrica restablecidos (800x400, 65 pt, 120% sombra)');
     });
+  }
 
-    updateModeUI();
-    triggerRender();
-    showToast('Ajustes restablecidos (800x400, 65 pt, 120% sombra)', 'success');
-  });
+  // Guardar predeterminados personales
+  if (elements.btnSavePersonalDefaults) {
+    elements.btnSavePersonalDefaults.addEventListener('click', savePersonalDefaults);
+  }
+
+  // Cargar predeterminados personales
+  if (elements.btnLoadPersonalDefaults) {
+    elements.btnLoadPersonalDefaults.addEventListener('click', () => {
+      const saved = getPersonalDefaults();
+      if (saved) {
+        applySettings(saved, '⭐ Mis predeterminados personales aplicados');
+      } else {
+        showToast('No tienes ningún ajuste personal guardado todavía. Pulsa "Guardar mis predeterminados".', 'error');
+      }
+    });
+  }
 
   // Botón Descargar
   elements.btnDownload.addEventListener('click', downloadImage);
@@ -907,37 +1019,46 @@ async function init() {
 
   buildFondosGrid();
   attachEventListeners();
-  updateModeUI();
+  updatePersonalDefaultsUIState();
+
+  // Si el usuario ya guardó sus predeterminados personales en este navegador, aplicarlos al iniciar
+  const userDefaults = getPersonalDefaults();
+  if (userDefaults) {
+    applySettings(userDefaults);
+  } else {
+    updateModeUI();
+  }
+
   updateFilenamePreview();
 
-  elements.loadingOverlay.classList.add('active');
+  // Render inicial inmediato
+  triggerRender();
 
-  try {
-    if (document.fonts) {
-      await document.fonts.load('65px "Architects Daughter"');
-      await document.fonts.ready;
-    }
-
-    const currentFondoObj = FONDOS.find(f => f.id === state.selectedFondo) || FONDOS[0];
-    await Promise.all([
-      loadImage('logo.png'),
-      loadImage(currentFondoObj.file)
-    ]);
-
-    elements.loadingOverlay.classList.remove('active');
-    triggerRender();
-
-    setTimeout(() => {
-      FONDOS.forEach(f => {
-        if (f.id !== state.selectedFondo) loadImage(f.file).catch(() => {});
-      });
-    }, 800);
-
-  } catch (err) {
-    console.warn('Advertencia al cargar recursos iniciales:', err);
-    elements.loadingOverlay.classList.remove('active');
-    triggerRender();
+  // Escuchar cuando las fuentes del sistema/Google Fonts terminen de cargar
+  if (document.fonts) {
+    document.fonts.ready.then(() => {
+      triggerRender();
+    });
   }
+
+  // Cargar recursos visuales iniciales y actualizar render
+  const currentFondoObj = FONDOS.find(f => f.id === state.selectedFondo) || FONDOS[0];
+  Promise.all([
+    loadImage('logo.png'),
+    loadImage(currentFondoObj.file)
+  ]).then(() => {
+    triggerRender();
+  }).catch((err) => {
+    console.warn('Advertencia al cargar recursos iniciales:', err);
+    triggerRender();
+  });
+
+  // Precarga perezosa del resto de fondos para navegación instantánea
+  setTimeout(() => {
+    FONDOS.forEach(f => {
+      if (f.id !== state.selectedFondo) loadImage(f.file).catch(() => {});
+    });
+  }, 500);
 }
 
 // Arrancar cuando el DOM esté listo

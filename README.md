@@ -39,6 +39,11 @@ No obstante, **este generador y su código son de libre uso**: cualquier persona
   - Fondos para cada mes del año (`enero.png` a `diciembre.png`).
   - Fondo `especial.png`.
   - Fondo dinámico **Gris** (aplica escala de grises en tiempo real a `septiembre.png` sin necesidad de archivos adicionales).
+- **💾 Configuración personal persistente (LocalStorage):**
+  - **Guardar mis predeterminados:** Guarda tus medidas y ajustes preferidos (tamaño de fuente, grosor de borde, sombra, dimensiones de imagen y modo de composición) en tu navegador.
+  - **Cargar mis predeterminados:** Restaura tus preferencias guardadas con un solo clic.
+  - **Carga automática:** Al abrir la aplicación, tus predeterminados personales se cargan automáticamente si existen.
+  - **Restablecer a valores de fábrica:** Botón independiente para volver siempre a los valores originales predeterminados del sistema (800×400 px, 65 pt, 120% sombra, modo completo).
 - **Tipografía y estilo fiel a Illustrator:**
   - Tipografía **Architects Daughter** por defecto a **65 pt**.
   - Texto con relleno blanco, contorno negro de **2 pt** y sombra exterior difuminada al **120%**.

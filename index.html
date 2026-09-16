@@ -196,8 +196,31 @@
               <span class="setting-hint">Sombra difuminada oscura (120% por defecto)</span>
             </div>
             
-            <div class="setting-reset">
-              <button type="button" id="btnResetSettings" class="btn-link">Restablecer valores originales</button>
+            <hr class="settings-divider">
+
+            <!-- Configuración Personalizada en LocalStorage -->
+            <div class="personal-defaults-panel">
+              <div class="personal-defaults-header">
+                <span class="icon">💾</span>
+                <span>Configuración Personal</span>
+                <span id="savedBadge" class="saved-badge" style="display: none;">Guardada</span>
+              </div>
+              <p class="personal-defaults-desc">Guarda tus medidas y ajustes favoritos en este navegador para usarlos siempre.</p>
+              
+              <div class="personal-defaults-actions">
+                <button type="button" id="btnSavePersonalDefaults" class="btn-chip btn-save-custom" title="Guardar los ajustes actuales en tu navegador">
+                  💾 Guardar mis predeterminados
+                </button>
+                <button type="button" id="btnLoadPersonalDefaults" class="btn-chip btn-load-custom" title="Cargar tus ajustes guardados">
+                  ⭐ Cargar mis predeterminados
+                </button>
+              </div>
+
+              <div class="setting-reset">
+                <button type="button" id="btnResetSettings" class="btn-link" title="Restablecer a valores de fábrica">
+                  🔄 Restablecer a valores de fábrica
+                </button>
+              </div>
             </div>
           </div>
         </details>
@@ -225,10 +248,6 @@
             <canvas id="previewCanvas" width="800" height="400"></canvas>
             <div class="canvas-click-hint">
               <span>🔍 Clic para ampliar a tamaño real</span>
-            </div>
-            <div id="loadingOverlay" class="canvas-loading">
-              <div class="spinner"></div>
-              <span>Cargando recursos...</span>
             </div>
           </div>
 
@@ -305,7 +324,6 @@
         </div>
       </div>
     </div>
-    </main>
 
     <footer class="app-footer">
       <p>Generador de Recursos para Geodesafíos &bull; Listo para usar en local o subir a tu hosting.</p>
