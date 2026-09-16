@@ -2,7 +2,10 @@
 
 Aplicación web interactiva y ligera para generar y exportar fácilmente las imágenes destacadas mensuales (**800 × 400 píxeles**) utilizadas en las entradas de **Geodesafíos** en la web de [beaypepe.com](https://beaypepe.com).
 
-> 🌐 Puedes ver todos los geodesafíos en acción en:  
+> 🚀 **Acceso directo a la herramienta online:**  
+> **[https://beaypepe.github.io/imagenes-geodesafios/](https://beaypepe.github.io/imagenes-geodesafios/)**
+
+> 🌐 **Publicaciones de Geodesafíos:**  
 > **[https://beaypepe.com/geodesafios/](https://beaypepe.com/geodesafios/)**
 
 ---
