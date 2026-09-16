@@ -252,34 +252,40 @@ body {
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
 }
 
-.quick-nav-buttons {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+.quick-nav-container {
+  display: flex;
+  flex-direction: column;
   gap: 8px;
   margin-top: 12px;
 }
 
-@media (max-width: 440px) {
-  .quick-nav-buttons {
-    grid-template-columns: 1fr;
-  }
+.month-trio {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
 }
 
 .btn-chip {
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid var(--border-color);
   color: var(--text-secondary);
-  padding: 7px 12px;
+  padding: 8px 6px;
   border-radius: var(--radius-sm);
-  font-size: 0.82rem;
+  font-size: 0.8rem;
   font-weight: 500;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 5px;
   transition: all 0.2s ease;
   user-select: none;
+  white-space: nowrap;
+}
+
+.chip-icon {
+  flex-shrink: 0;
+  opacity: 0.9;
 }
 
 .btn-chip:hover {
@@ -294,23 +300,25 @@ body {
 }
 
 .nav-btn {
-  background: rgba(59, 130, 246, 0.08);
-  border-color: rgba(59, 130, 246, 0.2);
+  background: rgba(59, 130, 246, 0.09);
+  border-color: rgba(59, 130, 246, 0.25);
   color: #bfdbfe;
 }
 
 .nav-btn:hover {
-  background: rgba(59, 130, 246, 0.2);
+  background: rgba(59, 130, 246, 0.22);
   border-color: #3b82f6;
   color: #fff;
 }
 
 .special-btn {
-  grid-column: 1 / -1;
+  width: 100%;
+  padding: 8px 12px;
   background: linear-gradient(135deg, rgba(234, 179, 8, 0.12) 0%, rgba(249, 115, 22, 0.12) 100%);
-  border-color: rgba(234, 179, 8, 0.3);
+  border-color: rgba(234, 179, 8, 0.35);
   color: #fde047;
   font-weight: 600;
+  font-size: 0.83rem;
 }
 
 .special-btn:hover {
