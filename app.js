@@ -30,11 +30,14 @@ const MESES = [
  */
 function getCurrentDatePreset() {
   const now = new Date();
-  const monthName = MESES[now.getMonth()];
+  const monthIdx = now.getMonth();
+  const monthName = MESES[monthIdx];
   const year = now.getFullYear();
   return {
     fondoId: monthName.toLowerCase(),
-    text: `${monthName} ${year}`
+    text: `${monthName} ${year}`,
+    monthIndex: monthIdx,
+    year: year
   };
 }
 
@@ -44,6 +47,9 @@ const initialDate = getCurrentDatePreset();
 const state = {
   selectedFondo: initialDate.fondoId,
   text: initialDate.text,
+  viewYear: initialDate.year,
+  viewMonthIndex: initialDate.monthIndex,
+  isSpecial: false,
   fontSizePt: 65,           // Puntos tipográficos (65 pt por defecto)
   strokeWidthPt: 2,         // Borde negro en puntos (2 pt)
   bgYPercent: 50,           // 50% = centro del recorte
@@ -60,6 +66,10 @@ const elements = {
   canvas: document.getElementById('previewCanvas'),
   ctx: null,
   bannerText: document.getElementById('bannerText'),
+  btnPrevMonth: document.getElementById('btnPrevMonth'),
+  btnCurrentMonth: document.getElementById('btnCurrentMonth'),
+  btnNextMonth: document.getElementById('btnNextMonth'),
+  btnSpecial: document.getElementById('btnSpecial'),
   fondosGrid: document.getElementById('fondosGrid'),
   currentFondoLabel: document.getElementById('currentFondoLabel'),
   fontSizeRange: document.getElementById('fontSizeRange'),
@@ -316,6 +326,65 @@ function triggerRender() {
 }
 
 /**
+ * Cambia la vista a un mes y año concretos
+ */
+function setMonthView(year, monthIndex) {
+  state.viewYear = year;
+  state.viewMonthIndex = monthIndex;
+  state.isSpecial = false;
+
+  const monthName = MESES[monthIndex];
+  state.selectedFondo = monthName.toLowerCase();
+  state.text = `${monthName} ${year}`;
+
+  elements.bannerText.value = state.text;
+  elements.currentFondoLabel.textContent = `${state.selectedFondo}.png`;
+  updateActiveFondoCard();
+  triggerRender();
+}
+
+/**
+ * Cambia la vista al modo Geodesafío Especial
+ */
+function setSpecialView() {
+  state.isSpecial = true;
+  state.selectedFondo = 'especial';
+  state.text = 'Geodesafío especial';
+
+  elements.bannerText.value = state.text;
+  elements.currentFondoLabel.textContent = 'especial.png';
+  updateActiveFondoCard();
+  triggerRender();
+}
+
+/**
+ * Comprueba si el texto y fondo actuales coinciden con el estándar de un mes
+ */
+function isStandardMonthView() {
+  if (state.isSpecial) return false;
+  if (state.viewMonthIndex === undefined || state.viewYear === undefined) return false;
+  const expectedText = `${MESES[state.viewMonthIndex]} ${state.viewYear}`;
+  const expectedFondo = MESES[state.viewMonthIndex].toLowerCase();
+  return (
+    state.text.trim().toLowerCase() === expectedText.toLowerCase() &&
+    state.selectedFondo === expectedFondo
+  );
+}
+
+/**
+ * Actualiza la miniatura activa en la cuadrícula de fondos
+ */
+function updateActiveFondoCard() {
+  document.querySelectorAll('.fondo-card').forEach(card => {
+    if (card.dataset.id === state.selectedFondo) {
+      card.classList.add('active');
+    } else {
+      card.classList.remove('active');
+    }
+  });
+}
+
+/**
  * Inicializa la cuadrícula de selección de fondos
  */
 function buildFondosGrid() {
@@ -343,14 +412,24 @@ function buildFondosGrid() {
       if (state.selectedFondo === fondo.id) return;
       state.selectedFondo = fondo.id;
       
-      // Actualizar clases activas
-      document.querySelectorAll('.fondo-card').forEach(c => c.classList.remove('active'));
-      card.classList.add('active');
+      if (fondo.id === 'especial') {
+        state.isSpecial = true;
+        state.text = 'Geodesafío especial';
+        elements.bannerText.value = state.text;
+      } else {
+        state.isSpecial = false;
+        const idx = MESES.findIndex(m => m.toLowerCase() === fondo.id);
+        if (idx !== -1) {
+          state.viewMonthIndex = idx;
+          state.text = `${MESES[idx]} ${state.viewYear}`;
+          elements.bannerText.value = state.text;
+        }
+      }
 
-      // Actualizar badge
+      // Actualizar clases activas y badge
+      updateActiveFondoCard();
       elements.currentFondoLabel.textContent = `${fondo.id}.png`;
 
-      // Si el texto es de ejemplo y coincide con un mes, se puede actualizar sugerencia
       triggerRender();
     });
 
@@ -358,9 +437,6 @@ function buildFondosGrid() {
   });
 }
 
-/**
- * Maneja la descarga del archivo PNG
- */
 /**
  * Maneja la descarga del archivo PNG
  */
@@ -453,15 +529,70 @@ function attachEventListeners() {
     triggerRender();
   });
 
-  // Botones de sugerencias rápidas
-  document.querySelectorAll('.btn-chip').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const newText = btn.dataset.text;
-      elements.bannerText.value = newText;
-      state.text = newText;
-      triggerRender();
+  // Botón: Mes anterior
+  if (elements.btnPrevMonth) {
+    elements.btnPrevMonth.addEventListener('click', () => {
+      if (isStandardMonthView()) {
+        let m = state.viewMonthIndex - 1;
+        let y = state.viewYear;
+        if (m < 0) {
+          m = 11;
+          y--;
+        }
+        setMonthView(y, m);
+      } else {
+        // Si el usuario modificó manualmente texto/fondo o venía de especial, ir al mes anterior al actual real
+        const now = new Date();
+        let m = now.getMonth() - 1;
+        let y = now.getFullYear();
+        if (m < 0) {
+          m = 11;
+          y--;
+        }
+        setMonthView(y, m);
+      }
     });
-  });
+  }
+
+  // Botón: Mes actual
+  if (elements.btnCurrentMonth) {
+    elements.btnCurrentMonth.addEventListener('click', () => {
+      const now = new Date();
+      setMonthView(now.getFullYear(), now.getMonth());
+    });
+  }
+
+  // Botón: Mes posterior
+  if (elements.btnNextMonth) {
+    elements.btnNextMonth.addEventListener('click', () => {
+      if (isStandardMonthView()) {
+        let m = state.viewMonthIndex + 1;
+        let y = state.viewYear;
+        if (m > 11) {
+          m = 0;
+          y++;
+        }
+        setMonthView(y, m);
+      } else {
+        // Si el usuario modificó manualmente texto/fondo o venía de especial, ir al mes posterior al actual real
+        const now = new Date();
+        let m = now.getMonth() + 1;
+        let y = now.getFullYear();
+        if (m > 11) {
+          m = 0;
+          y++;
+        }
+        setMonthView(y, m);
+      }
+    });
+  }
+
+  // Botón: Geodesafío especial
+  if (elements.btnSpecial) {
+    elements.btnSpecial.addEventListener('click', () => {
+      setSpecialView();
+    });
+  }
 
   // Control: Tamaño de letra
   elements.fontSizeRange.addEventListener('input', (e) => {

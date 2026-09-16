@@ -44,13 +44,21 @@
           </div>
           <div class="card-body">
             <div class="input-wrapper">
-              <textarea id="bannerText" rows="2" placeholder="Escribe el texto aquí (ej: ENERO 2024)..." autofocus>ENERO 2024</textarea>
+              <textarea id="bannerText" rows="2" placeholder="Escribe el texto aquí (ej: Septiembre 2026)..." autofocus></textarea>
             </div>
-            <div class="quick-suggestions">
-              <span class="label-help">Ejemplos rápidos:</span>
-              <button type="button" class="btn-chip" data-text="ENERO 2024">Enero 2024</button>
-              <button type="button" class="btn-chip" data-text="GEODESAFÍO ESPECIAL">Especial</button>
-              <button type="button" class="btn-chip" data-text="RESUMEN ANUAL">Resumen</button>
+            <div class="quick-nav-buttons">
+              <button type="button" id="btnPrevMonth" class="btn-chip nav-btn" title="Ir al mes anterior">
+                ◀ Mes anterior
+              </button>
+              <button type="button" id="btnCurrentMonth" class="btn-chip nav-btn active-nav-btn" title="Ir al mes actual">
+                ● Mes actual
+              </button>
+              <button type="button" id="btnNextMonth" class="btn-chip nav-btn" title="Ir al mes posterior">
+                Mes posterior ▶
+              </button>
+              <button type="button" id="btnSpecial" class="btn-chip nav-btn special-btn" title="Poner fondo especial y texto Geodesafío especial">
+                ★ Geodesafío especial
+              </button>
             </div>
           </div>
         </div>
