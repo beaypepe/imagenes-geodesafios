@@ -75,6 +75,7 @@ imagenes-geodesafios/
 ├── app.js                # Lógica del Canvas 2D, controles y exportación
 ├── abrir-en-local.bat    # Lanzador automático para entorno local en Windows
 ├── logo.png              # Logotipo de Geodesafíos
+├── icono.png             # Favicon e icono de la aplicación
 ├── README.md             # Documentación del proyecto
 │
 ├── fondos/               # Fondos mensuales y especiales (1800x1800 px)
