@@ -16,7 +16,17 @@ No obstante, **este generador y su código son de libre uso**: cualquier persona
 
 ## ✨ Características Principales
 
-- **Dimensiones exactas:** Lienzo estándar de **800 × 400 px** en formato PNG.
+- **Dimensiones personalizables:**
+  - Por defecto: **800 × 400 px**.
+  - Ajustes rápidos con un clic: `800 × 400` (Estándar), `1200 × 630` (Redes Sociales), `1080 × 1080` (1:1 Cuadrado), `1920 × 1080` (Full HD) y tamaño personalizado libre en píxeles.
+  - El fondo se ajusta siempre mediante recorte proporcional inteligente sin deformar nada.
+- **4 Modos de composición:**
+  - **✨ Completo:** Logotipo en la parte superior y texto centrado abajo (modo estándar).
+  - **🏷️ Solo Logo:** Sin texto, el logotipo se centra automáticamente tanto horizontal como verticalmente.
+  - **✍️ Solo Texto:** Sin logo, el texto se centra automáticamente en todo el lienzo.
+  - **🖼️ Solo Fondo:** Muestra el fondo limpio sin elementos superpuestos.
+- **🔍 Modal a tamaño real (1:1):**
+  - Al hacer clic sobre el lienzo de previsualización o en el botón "Tamaño Real", se abre una ventana modal para inspeccionar la imagen a sus píxeles exactos (1:1).
 - **Detección inteligente de fecha:**
   - Al abrir la página, detecta automáticamente el mes y año actual (ej: *Septiembre 2026*) con la inicial en mayúscula.
   - Preselecciona y carga de inmediato el fondo correspondiente.
@@ -29,18 +39,12 @@ No obstante, **este generador y su código son de libre uso**: cualquier persona
   - Fondos para cada mes del año (`enero.png` a `diciembre.png`).
   - Fondo `especial.png`.
   - Fondo dinámico **Gris** (aplica escala de grises en tiempo real a `septiembre.png` sin necesidad de archivos adicionales).
-  - Recorte proporcional sin estirar ni deformar las imágenes originales de 1800×1800 px.
 - **Tipografía y estilo fiel a Illustrator:**
   - Tipografía **Architects Daughter** por defecto a **65 pt**.
-  - Texto centrado bajo el logotipo con relleno blanco, contorno negro de **2 pt** y sombra exterior difuminada al **120%**.
-  - Logotipo ubicado con exactitud en `X = 400, Y = 110` (775 × 105 px) con sombra integrada.
-- **Ajustes finos opcionales:**
-  - Deslizador de tamaño de letra (35 pt a 115 pt).
-  - Deslizador de grosor del contorno negro (0.5 pt a 6 pt).
-  - Deslizador de encuadre vertical del recorte del fondo.
-  - Deslizador de intensidad de sombra de 0% a 200%.
+  - Texto con relleno blanco, contorno negro de **2 pt** y sombra exterior difuminada al **120%**.
+  - Logotipo ubicado con exactitud con sombra integrada.
 - **Exportación inmediata:**
-  - **Descarga PNG directa** con el nombre de archivo correspondiente al texto escrito (ej: `Septiembre 2026.png`).
+  - **Descarga PNG directa** con el nombre de archivo correspondiente al texto o modo activo.
   - Botón para **Copiar al portapapeles** (en entornos seguros).
 
 ---

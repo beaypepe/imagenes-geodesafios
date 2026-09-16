@@ -1,6 +1,6 @@
 /**
  * Generador de Imágenes para Geodesafíos
- * Renderizado de alta precisión en Canvas 800x400 píxeles
+ * Renderizado de alta precisión en Canvas HTML5 con soporte multi-resolución y modos de diseño
  */
 
 // Lista de meses y fondos disponibles en la carpeta fondos/
@@ -51,10 +51,13 @@ const state = {
   viewYear: initialDate.year,
   viewMonthIndex: initialDate.monthIndex,
   isSpecial: false,
+  mode: 'full',             // 'full' | 'logo-only' | 'text-only' | 'bg-only'
+  canvasWidth: 800,         // Ancho del lienzo en píxeles
+  canvasHeight: 400,        // Alto del lienzo en píxeles
   fontSizePt: 65,           // Puntos tipográficos (65 pt por defecto)
   strokeWidthPt: 2,         // Borde negro en puntos (2 pt)
   bgYPercent: 50,           // 50% = centro del recorte
-  shadowIntensity: 1.2,     // Sombra de logo y texto (1.2 = 120% por defecto, ampliable hasta 2.0 / 200%)
+  shadowIntensity: 1.2,     // Sombra de logo y texto (1.2 = 120% por defecto)
   isFontReady: false,
   isRendering: false
 };
@@ -66,15 +69,32 @@ const imageCache = new Map();
 const elements = {
   canvas: document.getElementById('previewCanvas'),
   ctx: null,
+  canvasWrapper: document.getElementById('canvasWrapper'),
   bannerText: document.getElementById('bannerText'),
+  textInputWrapper: document.getElementById('textInputWrapper'),
+  quickNavContainer: document.getElementById('quickNavContainer'),
   btnPrevMonth: document.getElementById('btnPrevMonth'),
   btnCurrentMonth: document.getElementById('btnCurrentMonth'),
   btnNextMonth: document.getElementById('btnNextMonth'),
   btnSpecial: document.getElementById('btnSpecial'),
   fondosGrid: document.getElementById('fondosGrid'),
   currentFondoLabel: document.getElementById('currentFondoLabel'),
+  
+  // Modos de composición
+  compositionModes: document.getElementById('compositionModes'),
+  
+  // Dimensiones
+  customWidth: document.getElementById('customWidth'),
+  customHeight: document.getElementById('customHeight'),
+  dimLabel: document.getElementById('dimLabel'),
+  canvasResBadge: document.getElementById('canvasResBadge'),
+  dimChips: document.querySelectorAll('.dim-chip'),
+  
+  // Ajustes de diseño
+  fontSizeItem: document.getElementById('fontSizeItem'),
   fontSizeRange: document.getElementById('fontSizeRange'),
   fontSizeVal: document.getElementById('fontSizeVal'),
+  strokeWidthItem: document.getElementById('strokeWidthItem'),
   strokeWidthRange: document.getElementById('strokeWidthRange'),
   strokeWidthVal: document.getElementById('strokeWidthVal'),
   bgYRange: document.getElementById('bgYRange'),
@@ -82,11 +102,26 @@ const elements = {
   shadowRange: document.getElementById('shadowRange'),
   shadowVal: document.getElementById('shadowVal'),
   btnResetSettings: document.getElementById('btnResetSettings'),
+  
+  // Ficha técnica
+  specDim: document.getElementById('specDim'),
+  specMode: document.getElementById('specMode'),
+  
+  // Previsualización y Descarga
   previewFilename: document.getElementById('previewFilename'),
   btnDownload: document.getElementById('btnDownload'),
   btnCopyClipboard: document.getElementById('btnCopyClipboard'),
   loadingOverlay: document.getElementById('loadingOverlay'),
-  statusToast: document.getElementById('statusToast')
+  statusToast: document.getElementById('statusToast'),
+  
+  // Modal Lightbox
+  btnOpenModal: document.getElementById('btnOpenModal'),
+  modalLightbox: document.getElementById('modalLightbox'),
+  modalRealImage: document.getElementById('modalRealImage'),
+  modalResBadge: document.getElementById('modalResBadge'),
+  btnCloseModal: document.getElementById('btnCloseModal'),
+  btnModalCloseAction: document.getElementById('btnModalCloseAction'),
+  btnModalDownload: document.getElementById('btnModalDownload')
 };
 
 // Conversión de unidades tipográficas: 1 pt = 96 / 72 px (4/3 px)
@@ -128,30 +163,64 @@ function showToast(message, type = 'success') {
 }
 
 /**
- * Limpia y genera el nombre de archivo a partir del texto
+ * Limpia y genera el nombre de archivo a partir del texto y modo
  */
 function getSanitizedFilename() {
+  if (state.mode === 'logo-only') {
+    return 'geodesafio-logo';
+  }
+  if (state.mode === 'bg-only') {
+    return `geodesafio-fondo-${state.selectedFondo}`;
+  }
   const rawText = state.text.replace(/[\r\n]+/g, ' ').trim();
   const safeText = rawText.replace(/[\\/:*?"<>|]/g, '').trim();
   return safeText.length > 0 ? safeText : 'geodesafio';
 }
 
 /**
- * Actualiza el indicador visual del nombre de archivo
+ * Actualiza el indicador visual del nombre de archivo y fichas
  */
 function updateFilenamePreview() {
-  elements.previewFilename.textContent = `${getSanitizedFilename()}.png`;
+  const filename = `${getSanitizedFilename()}.png`;
+  if (elements.previewFilename) {
+    elements.previewFilename.textContent = filename;
+  }
+  
+  const resText = `${state.canvasWidth} × ${state.canvasHeight} px`;
+  if (elements.canvasResBadge) elements.canvasResBadge.textContent = resText;
+  if (elements.dimLabel) elements.dimLabel.textContent = resText;
+  if (elements.specDim) elements.specDim.textContent = resText;
+  if (elements.modalResBadge) elements.modalResBadge.textContent = resText;
+
+  if (elements.specMode) {
+    const modeNames = {
+      'full': 'Completo (Logo + Texto)',
+      'logo-only': 'Solo Logo (Centrado)',
+      'text-only': 'Solo Texto (Centrado)',
+      'bg-only': 'Solo Fondo'
+    };
+    elements.specMode.textContent = modeNames[state.mode] || state.mode;
+  }
 }
 
 /**
- * Renderizado principal en el Canvas 800x400
+ * Renderizado principal en el Canvas con soporte para dimensiones dinámicas y modos
  */
 async function renderCanvas() {
   if (!elements.ctx) return;
   const ctx = elements.ctx;
 
+  const targetW = state.canvasWidth;
+  const targetH = state.canvasHeight;
+
+  // Ajustar dimensiones nativas del canvas si cambiaron
+  if (elements.canvas.width !== targetW || elements.canvas.height !== targetH) {
+    elements.canvas.width = targetW;
+    elements.canvas.height = targetH;
+  }
+
   // 1. Limpiar lienzo
-  ctx.clearRect(0, 0, 800, 400);
+  ctx.clearRect(0, 0, targetW, targetH);
 
   // 2. Obtener fondo seleccionado
   const fondoObj = FONDOS.find(f => f.id === state.selectedFondo) || FONDOS[0];
@@ -163,156 +232,178 @@ async function renderCanvas() {
     ]);
 
     // -------------------------------------------------------------
-    // PASO 1: Dibujar fondo con recorte exacto (800x400 sin estirar)
+    // PASO 1: Dibujar fondo con recorte proporcional (sin estirar)
     // -------------------------------------------------------------
-    // El fondo original es de 1800 x 1800 px.
-    // Al escalarlo a ancho 800, la proporción 1:1 requeriría alto 800.
-    // Para una ventana de 800x400, en el original tomamos un alto de:
-    // sliceH = 1800 * (400 / 800) = 900 px.
     const bgOriginalW = bgImg.naturalWidth || 1800;
     const bgOriginalH = bgImg.naturalHeight || 1800;
-    const sliceW = bgOriginalW;
-    const sliceH = bgOriginalW * (400 / 800); // 900 px en imagen cuadrada
+
+    // Escala proporcional 'cover' para llenar completamente el canvas
+    const coverScale = Math.max(targetW / bgOriginalW, targetH / bgOriginalH);
+    const sliceW = targetW / coverScale;
+    const sliceH = targetH / coverScale;
 
     // Desplazamiento vertical según state.bgYPercent (0% = arriba, 50% = centro, 100% = abajo)
-    const maxScroll = Math.max(0, bgOriginalH - sliceH);
-    const sliceY = maxScroll * (state.bgYPercent / 100);
+    const maxScrollY = Math.max(0, bgOriginalH - sliceH);
+    const sliceY = maxScrollY * (state.bgYPercent / 100);
+
+    // Centrado horizontal en el original
+    const maxScrollX = Math.max(0, bgOriginalW - sliceW);
+    const sliceX = maxScrollX * 0.5;
 
     ctx.save();
     if (fondoObj.grayscale) {
       ctx.filter = 'grayscale(100%)';
     }
-    ctx.drawImage(bgImg, 0, sliceY, sliceW, sliceH, 0, 0, 800, 400);
+    ctx.drawImage(bgImg, sliceX, sliceY, sliceW, sliceH, 0, 0, targetW, targetH);
     ctx.restore();
 
-    // -------------------------------------------------------------
-    // PASO 2: Dibujar Logotipo con sombra exterior
-    // -------------------------------------------------------------
-    // Especificaciones exactas del usuario desde Illustrator:
-    // Dimensiones: 775 x 105 px
-    // Centro: X = 400, Y = 110
-    // Posición superior izquierda:
-    // x = 400 - (775 / 2) = 12.5 px
-    // y = 110 - (105 / 2) = 57.5 px
-    const logoW = 775;
-    const logoH = 105;
-    const logoX = 400 - (logoW / 2); // 12.5 px
-    const logoY = 110 - (logoH / 2); // 57.5 px
+    // Si el modo es 'bg-only', terminamos aquí
+    if (state.mode === 'bg-only') {
+      return;
+    }
 
     // -------------------------------------------------------------
     // Configuración de Sombra Compartida (Logo y Texto)
     // -------------------------------------------------------------
-    // state.shadowIntensity: 1.0 = 100%, hasta 2.0 = 200%
     const shadowAlpha = Math.min(1, state.shadowIntensity * 0.75);
     const shadowBlur = Math.round(14 * Math.min(2.2, Math.max(0.4, state.shadowIntensity)));
     const shadowOffsetY = Math.round(3 * Math.min(1.8, Math.max(0.5, state.shadowIntensity)));
 
-    ctx.save();
-    if (state.shadowIntensity > 0) {
-      ctx.shadowColor = `rgba(0, 0, 0, ${shadowAlpha})`;
-      ctx.shadowBlur = shadowBlur;
-      ctx.shadowOffsetX = 0;
-      ctx.shadowOffsetY = shadowOffsetY;
+    // Factor de escala relativo al lienzo base 800x400
+    const scaleFactor = targetW / 800;
+
+    // -------------------------------------------------------------
+    // PASO 2: Dibujar Logotipo
+    // -------------------------------------------------------------
+    const shouldDrawLogo = (state.mode === 'full' || state.mode === 'logo-only');
+    let logoW = 775 * scaleFactor;
+    let logoH = 105 * scaleFactor;
+    let logoX = (targetW - logoW) / 2;
+    let logoY = 0;
+
+    if (shouldDrawLogo) {
+      if (state.mode === 'logo-only') {
+        // Modo Solo Logo: centrado exacto tanto horizontal como verticalmente
+        logoY = (targetH - logoH) / 2;
+      } else {
+        // Modo Completo: en la parte superior proporcional
+        logoY = 57.5 * (targetH / 400);
+      }
+
+      ctx.save();
+      if (state.shadowIntensity > 0) {
+        ctx.shadowColor = `rgba(0, 0, 0, ${shadowAlpha})`;
+        ctx.shadowBlur = shadowBlur * scaleFactor;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = shadowOffsetY * scaleFactor;
+      }
+      ctx.drawImage(logoImg, logoX, logoY, logoW, logoH);
+      ctx.restore();
     }
-    ctx.drawImage(logoImg, logoX, logoY, logoW, logoH);
-    ctx.restore();
 
     // -------------------------------------------------------------
     // PASO 3: Dibujar Texto
     // -------------------------------------------------------------
-    // El texto va centrado horizontalmente y verticalmente en el hueco
-    // que queda bajo el logotipo (desde Y = 162.5 hasta Y = 400).
-    const spaceTop = logoY + logoH; // 162.5 px
-    const spaceBottom = 400;
-    const availableHeight = spaceBottom - spaceTop; // 237.5 px
-    const centerY = spaceTop + (availableHeight / 2); // 281.25 px
-    const centerX = 400;
+    const shouldDrawText = (state.mode === 'full' || state.mode === 'text-only');
 
-    // Obtener líneas de texto (respetar saltos manuales)
-    let rawLines = state.text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-    if (rawLines.length === 0) {
-      return; // No hay texto que escribir
-    }
+    if (shouldDrawText) {
+      let rawLines = state.text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+      
+      if (rawLines.length > 0) {
+        let centerY, availableHeight, maxTextW;
 
-    // Convertir pt a px
-    let fontSizePx = state.fontSizePt * PT_TO_PX;
-    const strokeWidthPx = state.strokeWidthPt * PT_TO_PX;
+        if (state.mode === 'text-only') {
+          // Modo Solo Texto: centrado exacto en todo el lienzo
+          centerY = targetH / 2;
+          availableHeight = targetH - (40 * scaleFactor);
+          maxTextW = targetW - (40 * scaleFactor);
+        } else {
+          // Modo Completo: centrado en el espacio restante bajo el logotipo
+          const spaceTop = logoY + logoH;
+          const spaceBottom = targetH;
+          availableHeight = spaceBottom - spaceTop;
+          centerY = spaceTop + (availableHeight / 2);
+          maxTextW = targetW - (40 * scaleFactor);
+        }
 
-    // Configurar contexto de fuente
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    
-    // Auto-ajuste de seguridad: Si hay 2 o más líneas o texto muy largo,
-    // reducir proporcionalmente si supera el ancho máximo (760px) o el alto disponible
-    const maxTextW = 760;
-    let lineHeight = fontSizePx * 1.14;
+        const centerX = targetW / 2;
 
-    const measureLongestLine = (size) => {
-      ctx.font = `${size}px "Architects Daughter", cursive, sans-serif`;
-      return Math.max(...rawLines.map(line => ctx.measureText(line).width));
-    };
+        // Convertir pt a px escalado según resolución
+        let fontSizePx = (state.fontSizePt * PT_TO_PX) * scaleFactor;
+        const strokeWidthPx = (state.strokeWidthPt * PT_TO_PX) * scaleFactor;
 
-    // Ajuste de ancho
-    let currentLongest = measureLongestLine(fontSizePx);
-    if (currentLongest > maxTextW) {
-      const scale = maxTextW / currentLongest;
-      fontSizePx = Math.floor(fontSizePx * scale);
-      lineHeight = fontSizePx * 1.14;
-    }
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        
+        let lineHeight = fontSizePx * 1.14;
 
-    // Ajuste de altura para que nunca roce el logo ni se salga del canvas
-    const totalTextHeight = (rawLines.length - 1) * lineHeight + fontSizePx;
-    if (totalTextHeight > availableHeight - 16) {
-      const scale = (availableHeight - 16) / totalTextHeight;
-      fontSizePx = Math.floor(fontSizePx * scale);
-      lineHeight = fontSizePx * 1.14;
-    }
+        const measureLongestLine = (size) => {
+          ctx.font = `${size}px "Architects Daughter", cursive, sans-serif`;
+          return Math.max(...rawLines.map(line => ctx.measureText(line).width));
+        };
 
-    // Establecer la fuente calculada
-    ctx.font = `${fontSizePx}px "Architects Daughter", cursive, sans-serif`;
+        // Ajuste de ancho
+        let currentLongest = measureLongestLine(fontSizePx);
+        if (currentLongest > maxTextW) {
+          const scale = maxTextW / currentLongest;
+          fontSizePx = Math.floor(fontSizePx * scale);
+          lineHeight = fontSizePx * 1.14;
+        }
 
-    // Posición inicial vertical para centrar el bloque completo de líneas
-    const totalBlockH = (rawLines.length - 1) * lineHeight;
-    const startY = centerY - (totalBlockH / 2);
+        // Ajuste de altura
+        const totalTextHeight = (rawLines.length - 1) * lineHeight + fontSizePx;
+        if (totalTextHeight > availableHeight - (16 * scaleFactor)) {
+          const scale = (availableHeight - (16 * scaleFactor)) / totalTextHeight;
+          fontSizePx = Math.floor(fontSizePx * scale);
+          lineHeight = fontSizePx * 1.14;
+        }
 
-    // Dibujar cada línea
-    rawLines.forEach((line, index) => {
-      const lineY = startY + (index * lineHeight);
+        // Establecer fuente final
+        ctx.font = `${fontSizePx}px "Architects Daughter", cursive, sans-serif`;
 
-      // 1. Sombra exterior + Contorno negro de 2 puntos
-      ctx.save();
-      if (state.shadowIntensity > 0) {
-        ctx.shadowColor = `rgba(0, 0, 0, ${shadowAlpha})`;
-        ctx.shadowBlur = shadowBlur;
-        ctx.shadowOffsetX = 0;
-        ctx.shadowOffsetY = shadowOffsetY;
+        const totalBlockH = (rawLines.length - 1) * lineHeight;
+        const startY = centerY - (totalBlockH / 2);
+
+        // Dibujar líneas
+        rawLines.forEach((line, index) => {
+          const lineY = startY + (index * lineHeight);
+
+          // 1. Sombra exterior + Contorno negro
+          ctx.save();
+          if (state.shadowIntensity > 0) {
+            ctx.shadowColor = `rgba(0, 0, 0, ${shadowAlpha})`;
+            ctx.shadowBlur = shadowBlur * scaleFactor;
+            ctx.shadowOffsetX = 0;
+            ctx.shadowOffsetY = shadowOffsetY * scaleFactor;
+          }
+          if (strokeWidthPx > 0) {
+            ctx.strokeStyle = '#000000';
+            ctx.lineWidth = strokeWidthPx * 2;
+            ctx.lineJoin = 'round';
+            ctx.miterLimit = 2;
+            ctx.strokeText(line, centerX, lineY);
+          }
+          ctx.restore();
+
+          // Sombra reforzada si > 120%
+          if (state.shadowIntensity > 1.2 && strokeWidthPx > 0) {
+            ctx.save();
+            ctx.shadowColor = `rgba(0, 0, 0, ${Math.min(1, (state.shadowIntensity - 1) * 0.8)})`;
+            ctx.shadowBlur = (shadowBlur * 1.3) * scaleFactor;
+            ctx.shadowOffsetX = 0;
+            ctx.shadowOffsetY = shadowOffsetY * scaleFactor;
+            ctx.strokeStyle = '#000000';
+            ctx.lineWidth = strokeWidthPx * 2;
+            ctx.strokeText(line, centerX, lineY);
+            ctx.restore();
+          }
+
+          // 2. Relleno blanco nítido encima
+          ctx.fillStyle = '#ffffff';
+          ctx.fillText(line, centerX, lineY);
+        });
       }
-      if (strokeWidthPx > 0) {
-        ctx.strokeStyle = '#000000';
-        ctx.lineWidth = strokeWidthPx * 2; // Duplicado porque se dibuja centrado sobre el borde
-        ctx.lineJoin = 'round';
-        ctx.miterLimit = 2;
-        ctx.strokeText(line, centerX, lineY);
-      }
-      ctx.restore();
-
-      // Si la sombra es muy intensa (> 120%), reforzar el pase de sombra
-      if (state.shadowIntensity > 1.2 && strokeWidthPx > 0) {
-        ctx.save();
-        ctx.shadowColor = `rgba(0, 0, 0, ${Math.min(1, (state.shadowIntensity - 1) * 0.8)})`;
-        ctx.shadowBlur = shadowBlur * 1.3;
-        ctx.shadowOffsetX = 0;
-        ctx.shadowOffsetY = shadowOffsetY;
-        ctx.strokeStyle = '#000000';
-        ctx.lineWidth = strokeWidthPx * 2;
-        ctx.strokeText(line, centerX, lineY);
-        ctx.restore();
-      }
-
-      // 2. Relleno blanco nítido encima
-      ctx.fillStyle = '#ffffff';
-      ctx.fillText(line, centerX, lineY);
-    });
+    }
 
   } catch (err) {
     console.error('Error renderizando el lienzo:', err);
@@ -426,7 +517,7 @@ function buildFondosGrid() {
         state.text = 'Geodesafío especial';
         elements.bannerText.value = state.text;
       } else if (fondo.id === 'gris') {
-        state.isSpecial = true; // Modo especial/personalizado
+        state.isSpecial = true;
       } else {
         state.isSpecial = false;
         const idx = MESES.findIndex(m => m.toLowerCase() === fondo.id);
@@ -437,7 +528,6 @@ function buildFondosGrid() {
         }
       }
 
-      // Actualizar clases activas y badge
       updateActiveFondoCard();
       elements.currentFondoLabel.textContent = fondo.id === 'gris' ? 'septiembre (gris)' : `${fondo.id}.png`;
 
@@ -531,6 +621,58 @@ async function copyToClipboard() {
 }
 
 /**
+ * Abre el modal Lightbox mostrando la imagen a tamaño real (1:1)
+ */
+function openRealSizeModal() {
+  try {
+    const dataUrl = elements.canvas.toDataURL('image/png');
+    elements.modalRealImage.src = dataUrl;
+    elements.modalLightbox.classList.add('open');
+    elements.modalLightbox.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+  } catch (err) {
+    console.warn('Error al generar vista modal:', err);
+    if (window.location.protocol === 'file:') {
+      handleLocalSecurityNotice();
+    }
+  }
+}
+
+/**
+ * Cierra el modal Lightbox
+ */
+function closeRealSizeModal() {
+  elements.modalLightbox.classList.remove('open');
+  elements.modalLightbox.setAttribute('aria-hidden', 'true');
+  document.body.style.overflow = '';
+}
+
+/**
+ * Actualiza la interfaz según el modo de composición seleccionado
+ */
+function updateModeUI() {
+  document.querySelectorAll('.mode-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.mode === state.mode);
+  });
+
+  const hideTextControls = (state.mode === 'logo-only' || state.mode === 'bg-only');
+  if (elements.textInputWrapper) {
+    elements.textInputWrapper.style.opacity = hideTextControls ? '0.4' : '1';
+    elements.textInputWrapper.style.pointerEvents = hideTextControls ? 'none' : 'auto';
+  }
+  if (elements.quickNavContainer) {
+    elements.quickNavContainer.style.opacity = hideTextControls ? '0.4' : '1';
+    elements.quickNavContainer.style.pointerEvents = hideTextControls ? 'none' : 'auto';
+  }
+  if (elements.fontSizeItem) {
+    elements.fontSizeItem.style.display = hideTextControls ? 'none' : 'flex';
+  }
+  if (elements.strokeWidthItem) {
+    elements.strokeWidthItem.style.display = hideTextControls ? 'none' : 'flex';
+  }
+}
+
+/**
  * Vinculación de eventos de la interfaz
  */
 function attachEventListeners() {
@@ -538,6 +680,17 @@ function attachEventListeners() {
   elements.bannerText.addEventListener('input', (e) => {
     state.text = e.target.value;
     triggerRender();
+  });
+
+  // Selector de Modo de Composición
+  document.querySelectorAll('.mode-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const mode = btn.dataset.mode;
+      if (state.mode === mode) return;
+      state.mode = mode;
+      updateModeUI();
+      triggerRender();
+    });
   });
 
   // Botón: Mes anterior
@@ -552,7 +705,6 @@ function attachEventListeners() {
         }
         setMonthView(y, m);
       } else {
-        // Si el usuario modificó manualmente texto/fondo o venía de especial, ir al mes anterior al actual real
         const now = new Date();
         let m = now.getMonth() - 1;
         let y = now.getFullYear();
@@ -585,7 +737,6 @@ function attachEventListeners() {
         }
         setMonthView(y, m);
       } else {
-        // Si el usuario modificó manualmente texto/fondo o venía de especial, ir al mes posterior al actual real
         const now = new Date();
         let m = now.getMonth() + 1;
         let y = now.getFullYear();
@@ -604,6 +755,42 @@ function attachEventListeners() {
       setSpecialView();
     });
   }
+
+  // Dimensiones predefinidas
+  elements.dimChips.forEach(chip => {
+    chip.addEventListener('click', () => {
+      const w = parseInt(chip.dataset.w, 10);
+      const h = parseInt(chip.dataset.h, 10);
+      state.canvasWidth = w;
+      state.canvasHeight = h;
+      elements.customWidth.value = w;
+      elements.customHeight.value = h;
+      elements.dimChips.forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      triggerRender();
+    });
+  });
+
+  // Dimensiones personalizadas (inputs)
+  const handleCustomDimChange = () => {
+    let w = parseInt(elements.customWidth.value, 10) || 800;
+    let h = parseInt(elements.customHeight.value, 10) || 400;
+    w = Math.max(200, Math.min(3840, w));
+    h = Math.max(200, Math.min(3840, h));
+    state.canvasWidth = w;
+    state.canvasHeight = h;
+
+    elements.dimChips.forEach(chip => {
+      const cw = parseInt(chip.dataset.w, 10);
+      const ch = parseInt(chip.dataset.h, 10);
+      chip.classList.toggle('active', cw === w && ch === h);
+    });
+
+    triggerRender();
+  };
+
+  elements.customWidth.addEventListener('input', handleCustomDimChange);
+  elements.customHeight.addEventListener('input', handleCustomDimChange);
 
   // Control: Tamaño de letra
   elements.fontSizeRange.addEventListener('input', (e) => {
@@ -637,12 +824,15 @@ function attachEventListeners() {
     triggerRender();
   });
 
-  // Restablecer valores por defecto (65 pt y 120% de sombra)
+  // Restablecer valores por defecto
   elements.btnResetSettings.addEventListener('click', () => {
     state.fontSizePt = 65;
     state.strokeWidthPt = 2;
     state.bgYPercent = 50;
     state.shadowIntensity = 1.2;
+    state.canvasWidth = 800;
+    state.canvasHeight = 400;
+    state.mode = 'full';
 
     elements.fontSizeRange.value = 65;
     elements.fontSizeVal.textContent = '65 pt';
@@ -656,8 +846,15 @@ function attachEventListeners() {
     elements.shadowRange.value = 120;
     elements.shadowVal.textContent = '120%';
 
+    elements.customWidth.value = 800;
+    elements.customHeight.value = 400;
+    elements.dimChips.forEach(chip => {
+      chip.classList.toggle('active', chip.dataset.w === '800' && chip.dataset.h === '400');
+    });
+
+    updateModeUI();
     triggerRender();
-    showToast('Ajustes restablecidos (65 pt, 120% sombra)', 'success');
+    showToast('Ajustes restablecidos (800x400, 65 pt, 120% sombra)', 'success');
   });
 
   // Botón Descargar
@@ -665,6 +862,38 @@ function attachEventListeners() {
 
   // Botón Copiar al portapapeles
   elements.btnCopyClipboard.addEventListener('click', copyToClipboard);
+
+  // Modal Lightbox
+  if (elements.canvasWrapper) {
+    elements.canvasWrapper.addEventListener('click', openRealSizeModal);
+  }
+  if (elements.btnOpenModal) {
+    elements.btnOpenModal.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openRealSizeModal();
+    });
+  }
+  if (elements.btnCloseModal) {
+    elements.btnCloseModal.addEventListener('click', closeRealSizeModal);
+  }
+  if (elements.btnModalCloseAction) {
+    elements.btnModalCloseAction.addEventListener('click', closeRealSizeModal);
+  }
+  if (elements.btnModalDownload) {
+    elements.btnModalDownload.addEventListener('click', downloadImage);
+  }
+  if (elements.modalLightbox) {
+    elements.modalLightbox.addEventListener('click', (e) => {
+      if (e.target === elements.modalLightbox) closeRealSizeModal();
+    });
+  }
+
+  // Cerrar modal con tecla Escape
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && elements.modalLightbox.classList.contains('open')) {
+      closeRealSizeModal();
+    }
+  });
 }
 
 /**
@@ -673,36 +902,31 @@ function attachEventListeners() {
 async function init() {
   elements.ctx = elements.canvas.getContext('2d');
   
-  // Establecer texto y etiqueta inicial según el mes actual
   elements.bannerText.value = state.text;
   elements.currentFondoLabel.textContent = `${state.selectedFondo}.png`;
 
   buildFondosGrid();
   attachEventListeners();
+  updateModeUI();
   updateFilenamePreview();
 
-  // Mostrar overlay de carga
   elements.loadingOverlay.classList.add('active');
 
   try {
-    // 1. Esperar carga de fuentes
     if (document.fonts) {
       await document.fonts.load('65px "Architects Daughter"');
       await document.fonts.ready;
     }
 
-    // 2. Precargar logo y el fondo del mes actual
     const currentFondoObj = FONDOS.find(f => f.id === state.selectedFondo) || FONDOS[0];
     await Promise.all([
       loadImage('logo.png'),
       loadImage(currentFondoObj.file)
     ]);
 
-    // Ocultar carga y renderizar
     elements.loadingOverlay.classList.remove('active');
     triggerRender();
 
-    // Precargar en segundo plano el resto de fondos para fluidez absoluta
     setTimeout(() => {
       FONDOS.forEach(f => {
         if (f.id !== state.selectedFondo) loadImage(f.file).catch(() => {});

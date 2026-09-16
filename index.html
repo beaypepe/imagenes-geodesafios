@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Generador de Imágenes - Geodesafíos (800x400)</title>
-  <meta name="description" content="Herramienta para generar y descargar imágenes destacadas de 800x400 para Geodesafíos.">
+  <title>Imágenes destacadas</title>
+  <meta name="description" content="Herramienta para generar y descargar imágenes destacadas.">
   
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="icono.png">
@@ -26,8 +26,8 @@
           <span class="icon">✨</span>
           <span class="badge-text">Geodesafíos Studio</span>
         </div>
-        <h1>Generador de Imágenes Destacadas</h1>
-        <p class="subtitle">Crea en segundos las imágenes mensuales de 800 × 400 px con calidad profesional y descarga directa.</p>
+        <h1>Imágenes destacadas</h1>
+        <p class="subtitle">Crea y descarga tus imágenes mensuales de forma rápida y sencilla.</p>
       </div>
       <div class="header-status">
         <span class="res-tag">800 × 400 px</span>
@@ -40,17 +40,34 @@
       <!-- Columna Izquierda: Controles -->
       <section class="controls-panel">
         
-        <!-- 1. Texto de la entrada -->
+        <!-- 1. Texto de la entrada y Modo de Composición -->
         <div class="card control-group">
           <div class="card-header">
             <span class="step-num">1</span>
-            <h2>Texto del Geodesafío</h2>
+            <h2>Contenido y Modo</h2>
           </div>
           <div class="card-body">
-            <div class="input-wrapper">
+            <!-- Modos de composición -->
+            <div class="composition-modes" id="compositionModes">
+              <button type="button" class="mode-btn active" data-mode="full" title="Logotipo en la parte superior y texto centrado abajo">
+                ✨ Completo
+              </button>
+              <button type="button" class="mode-btn" data-mode="logo-only" title="Sin texto: Logotipo centrado horizontal y verticalmente">
+                🏷️ Solo Logo
+              </button>
+              <button type="button" class="mode-btn" data-mode="text-only" title="Sin logo: Texto centrado horizontal y verticalmente">
+                ✍️ Solo Texto
+              </button>
+              <button type="button" class="mode-btn" data-mode="bg-only" title="Solo fondo limpio">
+                🖼️ Solo Fondo
+              </button>
+            </div>
+
+            <div class="input-wrapper" id="textInputWrapper">
               <textarea id="bannerText" rows="2" placeholder="Escribe el texto aquí (ej: Septiembre 2026)..." autofocus></textarea>
             </div>
-            <div class="quick-nav-container">
+            
+            <div class="quick-nav-container" id="quickNavContainer">
               <div class="month-trio">
                 <button type="button" id="btnPrevMonth" class="btn-chip nav-btn" title="Ir al mes anterior">
                   <svg class="chip-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -90,28 +107,57 @@
             <span class="step-num">2</span>
             <div class="header-with-badge">
               <h2>Selecciona el Fondo</h2>
-              <span id="currentFondoLabel" class="current-selection-badge">enero.png</span>
+              <span id="currentFondoLabel" class="current-selection-badge">septiembre.png</span>
             </div>
           </div>
           <div class="card-body">
             <div class="fondos-grid" id="fondosGrid">
-              <!-- Se generarán dinámicamente o pre-renderizados -->
+              <!-- Se generarán dinámicamente -->
             </div>
           </div>
         </div>
 
-        <!-- 3. Ajustes Avanzados (Desplegable) -->
+        <!-- 3. Dimensiones y Ajustes Avanzados (Desplegable) -->
         <details class="card control-group accordion" id="advancedSettings">
           <summary class="card-header">
             <div class="summary-title">
               <span class="step-num">⚙</span>
-              <h2>Ajustes finos (Opcional)</h2>
+              <h2>Dimensiones y Ajustes Finos</h2>
             </div>
             <span class="accordion-arrow">▼</span>
           </summary>
           <div class="card-body settings-grid">
+            
+            <!-- Dimensiones personalizables -->
+            <div class="setting-item dimensions-section">
+              <div class="setting-label">
+                <span>Dimensiones de la imagen:</span>
+                <strong id="dimLabel">800 × 400 px</strong>
+              </div>
+              <div class="dim-presets">
+                <button type="button" class="dim-chip active" data-w="800" data-h="400">800 × 400 (Por defecto)</button>
+                <button type="button" class="dim-chip" data-w="1200" data-h="630">1200 × 630 (Redes)</button>
+                <button type="button" class="dim-chip" data-w="1080" data-h="1080">1080 × 1080 (1:1)</button>
+                <button type="button" class="dim-chip" data-w="1920" data-h="1080">1920 × 1080 (HD)</button>
+              </div>
+              <div class="dim-custom-inputs">
+                <div class="dim-input-group">
+                  <label for="customWidth">Ancho (px):</label>
+                  <input type="number" id="customWidth" min="200" max="3840" step="10" value="800">
+                </div>
+                <span class="dim-separator">×</span>
+                <div class="dim-input-group">
+                  <label for="customHeight">Alto (px):</label>
+                  <input type="number" id="customHeight" min="200" max="3840" step="10" value="400">
+                </div>
+              </div>
+              <span class="setting-hint">El fondo se ajusta recortando proporcionalmente, sin deformar nada</span>
+            </div>
+
+            <hr class="settings-divider">
+
             <!-- Tamaño de fuente -->
-            <div class="setting-item">
+            <div class="setting-item" id="fontSizeItem">
               <div class="setting-label">
                 <span>Tamaño de letra:</span>
                 <strong id="fontSizeVal">65 pt</strong>
@@ -121,7 +167,7 @@
             </div>
 
             <!-- Grosor del borde -->
-            <div class="setting-item">
+            <div class="setting-item" id="strokeWidthItem">
               <div class="setting-label">
                 <span>Borde negro del texto:</span>
                 <strong id="strokeWidthVal">2 pt</strong>
@@ -167,13 +213,19 @@
               <h3>Previsualización en tiempo real</h3>
             </div>
             <div class="preview-meta">
-              <span class="zoom-indicator">100% (800 × 400)</span>
+              <span id="canvasResBadge" class="zoom-indicator">800 × 400 px</span>
+              <button type="button" id="btnOpenModal" class="btn-modal-trigger" title="Ver a tamaño real 1:1">
+                🔍 Tamaño Real
+              </button>
             </div>
           </div>
 
-          <div class="canvas-wrapper" id="canvasWrapper">
-            <!-- Canvas nativo de 800x400 píxeles -->
+          <div class="canvas-wrapper" id="canvasWrapper" title="Haz clic para ver a tamaño real (1:1)">
+            <!-- Canvas nativo -->
             <canvas id="previewCanvas" width="800" height="400"></canvas>
+            <div class="canvas-click-hint">
+              <span>🔍 Clic para ampliar a tamaño real</span>
+            </div>
             <div id="loadingOverlay" class="canvas-loading">
               <div class="spinner"></div>
               <span>Cargando recursos...</span>
@@ -184,7 +236,7 @@
             <div class="filename-preview">
               <span class="filename-icon">📄</span>
               <span class="filename-label">Nombre del archivo:</span>
-              <span id="previewFilename" class="filename-text">ENERO 2024.png</span>
+              <span id="previewFilename" class="filename-text">Septiembre 2026.png</span>
             </div>
 
             <div class="actions-group">
@@ -213,14 +265,46 @@
         <div class="specs-card">
           <h4>Detalles técnicos aplicados</h4>
           <ul class="specs-list">
-            <li><strong>Dimensiones exactas:</strong> 800 × 400 px (1:1 con Illustrator)</li>
-            <li><strong>Logotipo:</strong> 775 × 105 px centrado en X: 400, Y: 110</li>
-            <li><strong>Tipografía:</strong> Architects Daughter centrada en el hueco inferior</li>
-            <li><strong>Colores:</strong> Relleno blanco con contorno negro de 2 pt</li>
-            <li><strong>Fondos:</strong> Recorte proporcional sin deformación</li>
+            <li><strong>Lienzo:</strong> <span id="specDim">800 × 400 px</span> (con recorte proporcional)</li>
+            <li><strong>Modo:</strong> <span id="specMode">Completo (Logo + Texto)</span></li>
+            <li><strong>Tipografía:</strong> Architects Daughter centrada</li>
+            <li><strong>Colores:</strong> Relleno blanco con contorno negro y sombra al 120%</li>
+            <li><strong>Fondos:</strong> Recorte automático sin deformación</li>
           </ul>
         </div>
       </section>
+    </main>
+
+    <!-- Modal para ver la imagen a tamaño real (1:1) -->
+    <div id="modalLightbox" class="modal-backdrop" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <div class="modal-title">
+            <span class="icon">🖼️</span>
+            <h3>Vista Previa a Tamaño Real (1:1)</h3>
+            <span id="modalResBadge" class="modal-res-tag">800 × 400 px</span>
+          </div>
+          <button type="button" id="btnCloseModal" class="btn-close-modal" title="Cerrar (Esc)">✕</button>
+        </div>
+        <div class="modal-body" id="modalBody">
+          <img id="modalRealImage" src="" alt="Vista a tamaño real">
+        </div>
+        <div class="modal-footer">
+          <span class="modal-hint">Desplázate para ver toda la imagen si supera tu pantalla</span>
+          <div class="modal-actions">
+            <button type="button" id="btnModalDownload" class="btn-primary btn-sm">
+              <svg class="btn-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+              <span>Descargar PNG</span>
+            </button>
+            <button type="button" id="btnModalCloseAction" class="btn-secondary btn-sm">Cerrar</button>
+          </div>
+        </div>
+      </div>
+    </div>
     </main>
 
     <footer class="app-footer">
