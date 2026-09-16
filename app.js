@@ -17,7 +17,8 @@ const FONDOS = [
   { id: 'octubre', name: 'Octubre', file: 'fondos/octubre.png' },
   { id: 'noviembre', name: 'Noviembre', file: 'fondos/noviembre.png' },
   { id: 'diciembre', name: 'Diciembre', file: 'fondos/diciembre.png' },
-  { id: 'especial', name: 'Especial', file: 'fondos/especial.png' }
+  { id: 'especial', name: 'Especial', file: 'fondos/especial.png' },
+  { id: 'gris', name: 'Gris', file: 'fondos/septiembre.png', grayscale: true }
 ];
 
 const MESES = [
@@ -177,7 +178,12 @@ async function renderCanvas() {
     const maxScroll = Math.max(0, bgOriginalH - sliceH);
     const sliceY = maxScroll * (state.bgYPercent / 100);
 
+    ctx.save();
+    if (fondoObj.grayscale) {
+      ctx.filter = 'grayscale(100%)';
+    }
     ctx.drawImage(bgImg, 0, sliceY, sliceW, sliceH, 0, 0, 800, 400);
+    ctx.restore();
 
     // -------------------------------------------------------------
     // PASO 2: Dibujar Logotipo con sombra exterior
@@ -400,6 +406,9 @@ function buildFondosGrid() {
     img.src = fondo.file;
     img.alt = fondo.name;
     img.loading = 'lazy';
+    if (fondo.grayscale) {
+      img.style.filter = 'grayscale(100%)';
+    }
 
     const label = document.createElement('span');
     label.className = 'fondo-name';
@@ -416,6 +425,8 @@ function buildFondosGrid() {
         state.isSpecial = true;
         state.text = 'Geodesafío especial';
         elements.bannerText.value = state.text;
+      } else if (fondo.id === 'gris') {
+        state.isSpecial = true; // Modo especial/personalizado
       } else {
         state.isSpecial = false;
         const idx = MESES.findIndex(m => m.toLowerCase() === fondo.id);
@@ -428,7 +439,7 @@ function buildFondosGrid() {
 
       // Actualizar clases activas y badge
       updateActiveFondoCard();
-      elements.currentFondoLabel.textContent = `${fondo.id}.png`;
+      elements.currentFondoLabel.textContent = fondo.id === 'gris' ? 'septiembre (gris)' : `${fondo.id}.png`;
 
       triggerRender();
     });
