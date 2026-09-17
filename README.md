@@ -36,7 +36,7 @@ No obstante, **este generador y su código son de libre uso**: cualquier persona
 - **Navegación rápida de meses:**
   - **◀ Anterior:** Retrocede un mes respecto al mostrado.
   - **📅 Actual:** Regresa inmediatamente al mes y año real en curso.
-  - **Posterior ▶:** Avanza un mes respecto al mostrado.
+  - **Siguiente ▶:** Avanza un mes respecto al mostrado.
   - **★ Geodesafío especial:** Configura el fondo especial y el texto temático en un solo clic.
 - **Colección completa de fondos:**
   - Fondos para cada mes del año (`enero.png` a `diciembre.png`).

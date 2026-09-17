@@ -548,22 +548,6 @@ function buildFondosGrid() {
       if (state.selectedFondo === fondo.id) return;
       state.selectedFondo = fondo.id;
       
-      if (fondo.id === 'especial') {
-        state.isSpecial = true;
-        state.text = 'Geodesafío especial';
-        elements.bannerText.value = state.text;
-      } else if (fondo.id === 'gris') {
-        state.isSpecial = true;
-      } else {
-        state.isSpecial = false;
-        const idx = MESES.findIndex(m => m.toLowerCase() === fondo.id);
-        if (idx !== -1) {
-          state.viewMonthIndex = idx;
-          state.text = `${MESES[idx]} ${state.viewYear}`;
-          elements.bannerText.value = state.text;
-        }
-      }
-
       updateActiveFondoCard();
       elements.currentFondoLabel.textContent = fondo.id === 'gris' ? 'septiembre (gris)' : `${fondo.id}.png`;
 
