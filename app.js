@@ -179,17 +179,37 @@ function showToast(message, type = 'success') {
 }
 
 /**
- * Limpia y genera el nombre de archivo a partir del texto y modo
+ * Normaliza una cadena de texto para generar un nombre de archivo web seguro:
+ * - En minúsculas
+ * - Sin acentos (á->a, é->e, etc.)
+ * - Sustituye ñ/Ñ por n/N
+ * - Espacios y caracteres no alfanuméricos convertidos a guiones "-"
+ * - Sin guiones duplicados ni al principio/final
+ */
+function slugify(text) {
+  if (!text) return '';
+  return text
+    .toString()
+    .toLowerCase()
+    .replace(/ñ/g, 'n')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .replace(/-{2,}/g, '-');
+}
+
+/**
+ * Limpia y genera el nombre de archivo web seguro a partir del texto y modo
  */
 function getSanitizedFilename() {
   if (state.mode === 'logo-only') {
     return 'geodesafio-logo';
   }
   if (state.mode === 'bg-only') {
-    return `geodesafio-fondo-${state.selectedFondo}`;
+    return `geodesafio-fondo-${slugify(state.selectedFondo)}`;
   }
-  const rawText = state.text.replace(/[\r\n]+/g, ' ').trim();
-  const safeText = rawText.replace(/[\\/:*?"<>|]/g, '').trim();
+  const safeText = slugify(state.text);
   return safeText.length > 0 ? safeText : 'geodesafio';
 }
 
